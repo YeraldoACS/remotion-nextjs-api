@@ -1,12 +1,13 @@
 "use client";
 import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
-import { VideoData } from "../../data/mockData";
+import { VideoData } from "../../lib/types";
 
 interface MyVideoComponentProps {
   videoData: VideoData;
+  baseFPS: number | 30;
 }
 
-export const MyVideoComponent: React.FC<MyVideoComponentProps> = ({ videoData }) => {
+export const MyVideoComponent: React.FC<MyVideoComponentProps> = ({ videoData, baseFPS }) => {
   const frame = useCurrentFrame();
   //   const { width, height, fps } = useVideoConfig();
 

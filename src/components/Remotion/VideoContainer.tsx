@@ -1,37 +1,31 @@
 "use client";
-import { AbsoluteFill, interpolate, Sequence, useCurrentFrame, useVideoConfig, Video } from "remotion";
+import { AbsoluteFill, interpolate, OffthreadVideo, Sequence, useCurrentFrame, useVideoConfig, Video } from "remotion";
 import QuestionText from "./components/CollegeBasketball/QuestionText";
 import Answers from "./components/CollegeBasketball/Answers";
-import TimestampOverlay from "./components/CollegeBasketball/TimestampOverlay";
-import { VideoData } from "../../data/mockData";
+import { VideoData } from "../../lib/types";
 
 interface CollegeBasketballProps {
   videoData: VideoData;
+  baseFPS: number | 30;
 }
 
-export const CollegeBasketball: React.FC<CollegeBasketballProps> = ({ videoData }) => {
+export const CollegeBasketball: React.FC<CollegeBasketballProps> = ({ videoData, baseFPS: BASE_FPS }) => {
   const frame = useCurrentFrame();
   const videoConfig = useVideoConfig();
 
   // Initial start time for the first question
-  const transitionStart = 25;
-  const questionDuration = 300; // 10 seconds (30fps * 10)
-
+  const questionDuration = BASE_FPS * 20 + 20; // X seconds (30fps * X)
+  const firstQuestionStart = BASE_FPS * 6; // 6 seconds × 30fps = 180 frames
+  const delayBetweenQuestions = BASE_FPS * 2.5; // 3s
   // Placeholder background video URL (replace with your own)
-  const fps = videoConfig.fps;
 
   return (
-    <AbsoluteFill
-      style={{
-        flex: 1,
-        backgroundColor: videoData.backgroundColor,
-        justifyContent: "center",
-        alignItems: "center",
-      }}>
-      {/* Background Video */}
-      {videoData.backgroundVideoUrl && videoData.backgroundVideoUrl !== "" ? (
-        <Video
+    <AbsoluteFill style={{ flex: 1, backgroundColor: videoData.backgroundColor }}>
+      {videoData.backgroundVideoUrl && (
+        <OffthreadVideo
           src={videoData.backgroundVideoUrl}
+          startFrom={0}
+          endAt={3600}
           style={{
             position: "absolute",
             width: "100%",
@@ -39,38 +33,41 @@ export const CollegeBasketball: React.FC<CollegeBasketballProps> = ({ videoData 
             objectFit: "cover",
           }}
         />
-      ) : (
-        ""
       )}
 
-      {/* Overlay Questions & Answers */}
       {videoData.quizData.map((item, index) => {
-        const questionStart = transitionStart + index * questionDuration;
-
+        const questionStart = firstQuestionStart + index * (questionDuration + delayBetweenQuestions);
         return (
           <Sequence
             key={index}
             from={questionStart}
             durationInFrames={questionDuration}>
-            <AbsoluteFill className="flex flex-col items-center justify-center">
-              <QuestionText
-                realFrames={frame - questionStart}
-                text={item.question}
-              />
-              <Answers
-                answers={item.answers}
-                questionStart={questionStart}
-              />
-
-              {/* Timestamps */}
-              <TimestampOverlay
-                time={questionStart / fps}
-                position="left"
-              />
-              <TimestampOverlay
-                time={questionDuration / fps}
-                position="right"
-              />
+            <AbsoluteFill>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: "100vh",
+                }}>
+                <div className="container-full px-5">
+                  <div className="row ">
+                    <div className="col-12">
+                      <div className=" text-center mb-4">
+                        <QuestionText text={item.question} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="container">
+                  <Answers
+                    answers={item.answers}
+                    correctAnswer={item.correctAnswer}
+                    // answersStart={frame - questionStart}
+                  />
+                </div>
+              </div>
             </AbsoluteFill>
           </Sequence>
         );

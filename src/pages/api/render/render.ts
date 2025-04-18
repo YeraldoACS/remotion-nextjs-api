@@ -10,9 +10,19 @@ import { v4 as uuidv4 } from "uuid";
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
+  const sendProgress = (data: any) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
   try {
-    const { videoData } = req.body;
-    const compositionId = "my-video";
+    const { videoData, compositionId } = req.body;
+
+    // Set up a way to stream updates to the client
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    // Function to send progress updates to client
 
     const REMOTION_PATH = path.resolve("./src/remotion/index.ts");
     console.log("🚀 ~ handler ~ REMOTION_PATH:", REMOTION_PATH);
@@ -35,6 +45,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       codec: "h264",
       outputLocation: tempOut,
       inputProps: { videoData },
+      concurrency: 4,
+      // logLevel: "verbose",
+      audioCodec: "aac",
+      videoBitrate: "1000k",
+      imageFormat: "jpeg",
+      hardwareAcceleration: "if-possible",
+      onProgress: (progress) => {
+        // Send progress data to client
+        sendProgress({
+          type: "progress",
+          progress: progress.progress,
+          renderedDoneIn: progress.renderedDoneIn,
+          renderEstimatedTime: progress.renderEstimatedTime,
+          // Progress as percentage for easier display
+          percentComplete: Math.round(progress.progress * 100),
+        });
+      },
     });
     // 4. Render video
     const outputFileName = `${uuidv4()}.mp4`;
@@ -43,9 +70,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     fs.renameSync(tempOut, outputPublicPath);
     // 5. Move to public/renders folder
     const publicUrl = `/renders/${outputFileName}`;
-    return res.status(200).json({ success: true, url: publicUrl });
-  } catch (err: any) {
-    console.error("Render error:", err);
-    return res.status(500).json({ success: false, error: err.message });
+    // return res.status(200).json({ success: true, url: publicUrl });
+    // res.write(`data: ${JSON.stringify({ success: true, url: publicUrl })}\n\n`);
+    sendProgress({ success: true, url: publicUrl });
+    return res.end();
+  } catch (error: any) {
+    console.error("Render error:", error);
+    // return res.status(500).json({ success: false, error: err.message });
+    try {
+      sendProgress({
+        type: "error",
+        message: error.message,
+      });
+      return res.end();
+    } catch {
+      // If streaming hasn't started, return JSON error
+      return res.status(500).json({ error: error.message });
+    }
   }
 }

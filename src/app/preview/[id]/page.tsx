@@ -1,25 +1,31 @@
-"use-client";
-import * as React from "react";
-import { VideoPlayer } from "@app/src/components/Remotion/VideoPlayer";
-import { mockVideos } from "@app/src/data/mockData";
-import { Container } from "react-bootstrap";
+import { Metadata } from "next";
+import PageComponent from "./components/pageComponent";
 
-interface PageProps {
-  params: Promise<{ id: string }>;
+type PageProps = {
+  params: {
+    id: string;
+  };
+};
+
+// You can also fetch data here if needed
+export async function generateMetadata(_props: Promise<PageProps>): Promise<Metadata> {
+  const { params } = await _props; // 👈 await the promise to extract params
+  const { id } = await params;
+
+  const formattedTitle = id.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+  return {
+    title: `${formattedTitle} | Bravanna`,
+    description: `Video Template preview for '${formattedTitle}' on Bravanna.`,
+  };
 }
 
-export default function Page({ params }: PageProps) {
-  const { id } = React.use(params);
-  const video = mockVideos.find((v) => v.id === id);
-  if (!video) return <div>Not found</div>;
+export default async function Page({ params }: PageProps) {
+  const { id } = await params;
 
   return (
-    <Container
-      fluid
-      className="p-4"
-      style={{ minHeight: "100vh" }}>
-      <h1>{video.title}</h1>
-      <VideoPlayer videoData={video} />
-    </Container>
+    <>
+      <PageComponent id={id} />
+    </>
   );
 }

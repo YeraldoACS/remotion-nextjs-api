@@ -1,15 +1,12 @@
 "use client";
 
-import TemplatesPage from "./templates/page";
-import { Container } from "react-bootstrap";
+import TableData from "../components/Dashboard/VideosTable";
 
 export default function Page() {
   return (
-    <Container
-      fluid
-      className="p-4"
-      style={{ minHeight: "100vh" }}>
-      <TemplatesPage />
-    </Container>
+    <div>
+      <h2 className="text-2xl font-bold mb-4">Library</h2>
+      <TableData />
+    </div>
   );
 }
